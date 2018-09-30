@@ -24,6 +24,16 @@
   setopt HIST_EXPAND # 補完時にヒストリを自動的に展開する
 }
 
+: "エイリアス設定" && {
+    alias ls='ls -G' # 色分け表示する
+    alias la='ls -aG' # 全てのファイルを表示する
+    alias ll='ls -lG' # 詳細まで表示する
+    alias rm='rm -i' # 削除する時に確認する
+    alias mv='mv -i' # mvする対象が既に存在していたら確認する
+    alias cp='cp -i' # cpする対象がすでに存在していたら確認する
+    alias ..='cd ..' # 親のディレクトリに移動する
+}
+
 : "キーバインディング" && {
   bindkey -e # emacs キーマップを選択
   : "Ctrl-Yで上のディレクトリに移動できる" && {
