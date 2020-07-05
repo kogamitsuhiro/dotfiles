@@ -19,9 +19,17 @@
   setopt hist_ignore_all_dups # 重複するコマンドは古い法を削除する
   setopt share_history # 異なるウィンドウでコマンドヒストリを共有する
   setopt hist_no_store # historyコマンドは履歴に登録しない
-  setopt hist_reduce_blanks # 余分な空白は詰めて記録
   setopt hist_verify # `!!`を実行したときにいきなり実行せずコマンドを見せる
   setopt HIST_EXPAND # 補完時にヒストリを自動的に展開する
+
+  autoload history-search-end
+  zle -N history-beginning-search-backward-end history-search-end
+  zle -N history-beginning-search-forward-end history-search-end
+
+  bindkey '^P' history-beginning-search-backward-end
+  bindkey '^N' history-beginning-search-forward-end
+  bindkey '^[[A' history-beginning-search-backward-end # ↑キー
+  bindkey '^[[B' history-beginning-search-forward-end  # ↓キー
 }
 
 : "エイリアス設定" && {
@@ -32,71 +40,29 @@
     alias mv='mv -i' # mvする対象が既に存在していたら確認する
     alias cp='cp -i' # cpする対象がすでに存在していたら確認する
     alias ..='cd ..' # 親のディレクトリに移動する
+    alias g='git'
+    alias gb='git branch'
+    alias gco='git checkout'
+    alias gst='git status'
+    alias ga='git add'
+    alias gd='git diff --histogram'
+    alias gc='git commit'
+    alias gr="git log --graph --date=short --decorate=short --pretty=format:'%Cgreen%h %Creset%cd %Cblue%cn %Cred%d %Creset%s'"
 }
 
-: "キーバインディング" && {
-  bindkey -e # emacs キーマップを選択
-  : "Ctrl-Yで上のディレクトリに移動できる" && {
-    function cd-up { zle push-line && LBUFFER='builtin cd ..' && zle accept-line }
-    zle -N cd-up
-    bindkey "^Y" cd-up
-  }
-  : "Ctrl-Dでシェルからログアウトしない" && {
-    setopt ignoreeof
-  }
-  : "Ctrl-Wでパスの文字列などをスラッシュ単位でdeleteできる" && {
-    autoload -U select-word-style
-    select-word-style bash
-  }
-  : "Ctrl-[で直前コマンドの単語を挿入できる" && {
-    autoload -Uz smart-insert-last-word
-    zstyle :insert-last-word match '*([[:alpha:]/\\]?|?[[:alpha:]/\\])*' # [a-zA-Z], /, \ のうち少なくとも1文字を含む長さ2以上の単語
-    zle -N insert-last-word smart-insert-last-word
-    bindkey '^[' insert-last-word
-    # see http://qiita.com/mollifier/items/1a9126b2200bcbaf515f
-  }
-  : "矢印キーで部分一致検索できる" && {
-    source /usr/local/share/zsh-history-substring-search/zsh-history-substring-search.zsh
-    bindkey '^[[A' history-substring-search-up
-    bindkey '^[[B' history-substring-search-down
-  }
-}
-
-: "プラグイン" && {
-  export ZPLUG_HOME=/usr/local/opt/zplug
-  [ -f "$ZPLUG_HOME/init.zsh" ] || brew install zplug # zplugはHomebrewからインストール
-  source $ZPLUG_HOME/init.zsh
-  zplug "zsh-users/zsh-completions" # 多くのコマンドに対応する入力補完 … https://github.com/zsh-users/zsh-completions
-  zplug "mafredri/zsh-async" # "sindresorhus/pure"が依存している
-  zplug "sindresorhus/pure", use:pure.zsh, as:theme && { # 美しく最小限で高速なプロンプト … https://github.com/sindresorhus/pure
-    export PURE_PROMPT_SYMBOL="❯❯❯"
-  }
-  zplug "zsh-users/zsh-syntax-highlighting", defer:2 # fishシェル風のシンタクスハイライト … https://github.com/zsh-users/zsh-syntax-highlighting
-  zplug "zsh-users/zsh-history-substring-search", hook-build:"__zsh_version 5.6.2"
-  zplug "supercrabtree/k" # git情報を含んだファイルリストを表示するコマンド … https://github.com/supercrabtree/k
-  zplug "junegunn/fzf-bin", as:command, from:gh-r, rename-to:fzf # あいまい検索ができるコマンド … https://github.com/junegunn/fzf
-  zplug "junegunn/fzf", as:command, use:bin/fzf-tmux # tmuxでfzfを使えるようにするプラグイン
-  zplug "junegunn/fzf", use:shell/key-bindings.zsh # Ctrl-Rで履歴検索、Ctrl-Tでファイル名検索補完できる
-  zplug "junegunn/fzf", use:shell/completion.zsh # cd **[TAB], vim **[TAB]などでファイル名を補完できる
-  zplug "b4b4r07/enhancd", use:init.sh # cdコマンドをインタラクティブにするプラグイン … https://github.com/b4b4r07/enhancd
-  zplug 'b4b4r07/gomi', as:command, from:gh-r # 消したファイルをゴミ箱から復元できるrmコマンド代替 … https://github.com/b4b4r07/gomi
-  zplug "momo-lab/zsh-abbrev-alias" # 略語展開(iab)を設定するためのプラグイン … http://qiita.com/momo-lab/items/b1b1afee313e42ba687b
-  zplug "paulirish/git-open", as:plugin # GitHub, GitLab, BitBucketを開けるようにするコマンド … https://github.com/paulirish/git-open
-  zplug "plugins/git", from:oh-my-zsh #oh-my-zshのgitプラグインを使用する … gihttps://github.com/robbyrussell/oh-my-zsh/tree/master/plugins/git
-  zplug check || zplug install
-  zplug load
-}
 
 : "cd先のディレクトリのファイル一覧を表示する" && {
   [ -z "$ENHANCD_ROOT" ] && function chpwd { tree -L 1 } # enhancdがない場合
+# プロンプトが表示されるたびにプロンプト文字列を評価、置換する
   [ -z "$ENHANCD_ROOT" ] || export ENHANCD_HOOK_AFTER_CD="tree -L 1" # enhancdがあるときはそのHook機構を使う
 }
 
-: "sshコマンド補完を~/.ssh/configから行う" && {
-  function _ssh { compadd $(fgrep 'Host ' ~/.ssh/*/config | grep -v '*' |  awk '{print $2}' | sort) }
-}
+: "プロンプト表示設定" && {
+  # プロンプト左側
+  PROMPT='%F{245}%~%f
+%B%F{213}❯❯❯%f%b '
 
-: "プロンプトにgit情報を見やすく表示する" && {
+  # プロンプト右側
   RPROMPT="%{${fg[blue]}%}[%~]%{${reset_color}%}"
   autoload -Uz vcs_info
   setopt prompt_subst
@@ -108,4 +74,3 @@
   precmd () { vcs_info }
   RPROMPT=$RPROMPT'${vcs_info_msg_0_}'
 }
-
